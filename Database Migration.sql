@@ -1,41 +1,28 @@
-import mysql.connector
-import psycopg2
-from psycopg2.extras import execute_values
+-- MySQL to PostgreSQL Migration Script
 
-# MySQL Connection
-mysql_conn = mysql.connector.connect(
-    host="your_mysql_host",
-    user="your_mysql_user",
-    password="your_mysql_password",
-    database="your_mysql_database"
-)
-mysql_cursor = mysql_conn.cursor(dictionary=True)
+-- Step 1: Export MySQL Data to CSV
+-- Run this in MySQL to export data
+SELECT * INTO OUTFILE '/tmp/employees.csv' 
+FIELDS TERMINATED BY ',' 
+ENCLOSED BY '"' 
+LINES TERMINATED BY '\n' 
+FROM employees;
 
-# PostgreSQL Connection
-pg_conn = psycopg2.connect(
-    host="your_postgres_host",
-    user="your_postgres_user",
-    password="your_postgres_password",
-    database="your_postgres_database"
-)
-pg_cursor = pg_conn.cursor()
+-- Step 2: Create Table in PostgreSQL
+CREATE TABLE employees (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255),
+    position VARCHAR(255),
+    department VARCHAR(255),
+    salary DECIMAL(10,2)
+);
 
-# Fetch data from MySQL
-mysql_cursor.execute("SELECT * FROM your_table")
-data = mysql_cursor.fetchall()
+-- Step 3: Import CSV Data into PostgreSQL
+COPY employees(name, position, department, salary)
+FROM '/tmp/employees.csv' 
+DELIMITER ',' 
+CSV HEADER;
 
-# Insert data into PostgreSQL
-if data:
-    columns = data[0].keys()
-    query = f"INSERT INTO your_table ({', '.join(columns)}) VALUES %s"
-    values = [[row[col] for col in columns] for row in data]
-    execute_values(pg_cursor, query, values)
-    pg_conn.commit()
+-- Step 4: Verify Data Integrity
+SELECT COUNT(*) FROM employees;
 
-# Close connections
-mysql_cursor.close()
-mysql_conn.close()
-pg_cursor.close()
-pg_conn.close()
-
-print("Data migration completed successfully.")
